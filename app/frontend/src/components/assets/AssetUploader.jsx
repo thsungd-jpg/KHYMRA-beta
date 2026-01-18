@@ -18,9 +18,8 @@ export function AssetUploader({ projectId, onUploadComplete }) {
     }));
     setUploadProgress(progress);
 
-    // Upload files one by one
-    for (let i = 0; i < acceptedFiles.length; i++) {
-      const file = acceptedFiles[i];
+    // Upload files in parallel using Promise.all for better performance
+    const uploadPromises = acceptedFiles.map(async (file, index) => {
       const formData = new FormData();
       formData.append('file', file);
 
@@ -38,17 +37,22 @@ export function AssetUploader({ projectId, onUploadComplete }) {
         const data = await response.json();
         
         // Update progress
-        progress[i].status = 'complete';
-        progress[i].progress = 100;
+        progress[index].status = 'complete';
+        progress[index].progress = 100;
         setUploadProgress([...progress]);
 
         toast.success(`Uploaded ${file.name}`);
+        return { success: true, file: file.name };
       } catch (error) {
-        progress[i].status = 'error';
+        progress[index].status = 'error';
         setUploadProgress([...progress]);
         toast.error(`Failed to upload ${file.name}`);
+        return { success: false, file: file.name, error };
       }
-    }
+    });
+
+    // Wait for all uploads to complete
+    await Promise.all(uploadPromises);
 
     setUploading(false);
     
