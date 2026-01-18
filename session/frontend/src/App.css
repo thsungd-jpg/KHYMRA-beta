@@ -1,0 +1,386 @@
+/* Chimera App Styles */
+
+/* Infinite Canvas */
+.infinite-canvas {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    background: #050505;
+}
+
+.canvas-content {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    transform-origin: center center;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Project Node (Solar System) */
+.project-node {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.project-node:hover {
+    transform: scale(1.05);
+}
+
+.project-core {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, #F59E0B, #B45309);
+    box-shadow: 
+        0 0 40px rgba(245, 158, 11, 0.4),
+        inset 0 0 20px rgba(255, 255, 255, 0.1);
+    position: relative;
+}
+
+.project-orbit {
+    position: absolute;
+    border: 1px solid rgba(245, 158, 11, 0.2);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.orbit-planet {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #10B981;
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+}
+
+/* HUD Navigation */
+.hud-nav {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 1rem;
+    padding: 0.75rem 1.5rem;
+    background: rgba(10, 10, 11, 0.9);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 9999px;
+    z-index: 100;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+}
+
+.hud-nav.visible {
+    opacity: 1;
+}
+
+.hud-nav-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    color: #A1A1AA;
+    transition: all 0.3s ease;
+}
+
+.hud-nav-item:hover,
+.hud-nav-item.active {
+    color: #F59E0B;
+    background: rgba(245, 158, 11, 0.1);
+}
+
+/* Panel Styles */
+.chimera-panel {
+    background: rgba(10, 10, 11, 0.95);
+    backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 1rem;
+    overflow: hidden;
+}
+
+.panel-header {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.panel-title {
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 600;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #F59E0B;
+}
+
+.panel-content {
+    padding: 1.5rem;
+}
+
+/* Slider Styles */
+.chimera-slider {
+    position: relative;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    cursor: pointer;
+}
+
+.chimera-slider-fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    background: linear-gradient(90deg, #F59E0B, #FBBF24);
+    border-radius: 2px;
+    transition: width 0.1s ease;
+}
+
+.chimera-slider-thumb {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 16px;
+    height: 16px;
+    background: #F59E0B;
+    border: 2px solid #050505;
+    border-radius: 50%;
+    cursor: grab;
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+    transition: transform 0.2s ease;
+}
+
+.chimera-slider-thumb:hover {
+    transform: translate(-50%, -50%) scale(1.2);
+}
+
+/* State Card */
+.state-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 0.75rem;
+    padding: 1rem;
+    transition: all 0.3s ease;
+}
+
+.state-card:hover {
+    border-color: rgba(245, 158, 11, 0.3);
+    background: rgba(245, 158, 11, 0.02);
+}
+
+.state-card.active {
+    border-color: rgba(245, 158, 11, 0.5);
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.1);
+}
+
+/* Event Horizon Button */
+.event-horizon-btn {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #050505 40%, transparent 70%);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    cursor: pointer;
+    overflow: hidden;
+    transition: all 0.4s ease;
+}
+
+.event-horizon-btn::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: 50%;
+    background: conic-gradient(from 0deg, transparent, rgba(245, 158, 11, 0.5), transparent);
+    animation: spin 3s linear infinite;
+}
+
+.event-horizon-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 0 30px rgba(245, 158, 11, 0.3);
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Ripple Effect */
+.ripple-container {
+    position: absolute;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.ripple {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(245, 158, 11, 0.3);
+    animation: ripple 1s ease-out forwards;
+}
+
+@keyframes ripple {
+    0% {
+        transform: scale(0);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(4);
+        opacity: 0;
+    }
+}
+
+/* Preview Frame */
+.preview-frame {
+    position: relative;
+    background: #050505;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 1rem;
+    overflow: hidden;
+}
+
+.preview-device-phone {
+    width: 320px;
+    height: 568px;
+    border-radius: 2rem;
+}
+
+.preview-device-tablet {
+    width: 768px;
+    height: 480px;
+}
+
+.preview-device-desktop {
+    width: 100%;
+    aspect-ratio: 16/10;
+}
+
+/* Timeline */
+.timeline-track {
+    height: 60px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 0.5rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.timeline-segment {
+    position: absolute;
+    top: 8px;
+    bottom: 8px;
+    border-radius: 0.25rem;
+    background: rgba(245, 158, 11, 0.3);
+    border: 1px solid rgba(245, 158, 11, 0.5);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.timeline-segment:hover {
+    background: rgba(245, 158, 11, 0.5);
+}
+
+.timeline-playhead {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #F59E0B;
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+}
+
+/* Molecular Editor */
+.molecular-node {
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #10B981;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    cursor: grab;
+    transition: all 0.2s ease;
+}
+
+.molecular-node:hover {
+    transform: scale(1.2);
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.5);
+}
+
+.molecular-bond {
+    position: absolute;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.2);
+    transform-origin: left center;
+    pointer-events: none;
+}
+
+/* Loading States */
+.skeleton {
+    background: linear-gradient(90deg, rgba(255,255,255,0.02) 25%, rgba(255,255,255,0.05) 50%, rgba(255,255,255,0.02) 75%);
+    background-size: 200% 100%;
+    animation: skeleton 1.5s infinite;
+}
+
+@keyframes skeleton {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* Tooltip */
+.chimera-tooltip {
+    position: absolute;
+    padding: 0.5rem 0.75rem;
+    background: rgba(10, 10, 11, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.5rem;
+    font-size: 0.75rem;
+    color: #A1A1AA;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0;
+    transform: translateY(4px);
+    transition: all 0.2s ease;
+}
+
+.chimera-tooltip.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Modal Overlay */
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(8px);
+    z-index: 200;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.modal-backdrop.visible {
+    opacity: 1;
+}
+
+.modal-content {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.95);
+    z-index: 201;
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.modal-content.visible {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+}
