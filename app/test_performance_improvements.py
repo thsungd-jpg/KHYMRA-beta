@@ -6,6 +6,9 @@ import sys
 import time
 from pathlib import Path
 
+# Constants matching server implementation
+MAX_PALETTE_SIZE = 20
+
 def test_color_palette_efficiency():
     """Test that color palette update uses set for O(1) lookups instead of O(n) list"""
     print("\n🔍 Testing color palette efficiency...")
@@ -29,11 +32,11 @@ def test_color_palette_efficiency():
         # New approach: O(1) lookup using set
         palette_set = set(current_palette_new)
         unique_new_colors = [c for c in new_colors_new if c not in palette_set]
-        result_new = (current_palette_new + unique_new_colors)[-20:]
+        result_new = (current_palette_new + unique_new_colors)[-MAX_PALETTE_SIZE:]
     new_time = time.perf_counter() - start
     
     # Verify results are the same
-    result_old_trimmed = result_old[-20:]
+    result_old_trimmed = result_old[-MAX_PALETTE_SIZE:]
     assert result_new == result_old_trimmed, "Results should match"
     
     speedup = old_time / new_time if new_time > 0 else float('inf')
