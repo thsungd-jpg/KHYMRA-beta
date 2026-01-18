@@ -134,7 +134,7 @@ def get_project_upload_dir(project_id: str) -> Path:
     return project_dir
 
 
-def optimize_image(image_path: Path, max_width: int = 1920, max_height: int = 1080) -> None:
+def optimize_image(image_path: Path, max_width: int = 1920, max_height: int = 1080) -> Path:
     """Optimize image file - resize if too large and save as WebP"""
     try:
         with Image.open(image_path) as img:
