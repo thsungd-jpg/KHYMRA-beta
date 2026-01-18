@@ -11,16 +11,15 @@ export function AssetUploader({ projectId, onUploadComplete }) {
 
   const onDrop = useCallback(async (acceptedFiles) => {
     setUploading(true);
-    const progress = acceptedFiles.map(file => ({
+    const initialProgress = acceptedFiles.map(file => ({
       name: file.name,
       status: 'uploading',
       progress: 0
     }));
-    setUploadProgress(progress);
+    setUploadProgress(initialProgress);
 
-    // Upload files one by one
-    for (let i = 0; i < acceptedFiles.length; i++) {
-      const file = acceptedFiles[i];
+    // Upload files in parallel using Promise.all for better performance
+    const uploadPromises = acceptedFiles.map(async (file, index) => {
       const formData = new FormData();
       formData.append('file', file);
 
@@ -37,18 +36,36 @@ export function AssetUploader({ projectId, onUploadComplete }) {
 
         const data = await response.json();
         
-        // Update progress
-        progress[i].status = 'complete';
-        progress[i].progress = 100;
-        setUploadProgress([...progress]);
+        // Update progress using functional state update to avoid race conditions
+        setUploadProgress(prev => {
+          const updated = [...prev];
+          updated[index] = {
+            ...updated[index],
+            status: 'complete',
+            progress: 100
+          };
+          return updated;
+        });
 
         toast.success(`Uploaded ${file.name}`);
+        return { success: true, file: file.name };
       } catch (error) {
-        progress[i].status = 'error';
-        setUploadProgress([...progress]);
+        // Update progress using functional state update to avoid race conditions
+        setUploadProgress(prev => {
+          const updated = [...prev];
+          updated[index] = {
+            ...updated[index],
+            status: 'error'
+          };
+          return updated;
+        });
         toast.error(`Failed to upload ${file.name}`);
+        return { success: false, file: file.name, error };
       }
-    }
+    });
+
+    // Wait for all uploads to complete
+    await Promise.all(uploadPromises);
 
     setUploading(false);
     

@@ -18,6 +18,7 @@ from PIL import Image
 from colorthief import ColorThief
 import io
 from mutagen import File as MutagenFile
+import asyncio
 
 
 ROOT_DIR = Path(__file__).parent
@@ -76,9 +77,19 @@ async def create_status_check(input: StatusCheckCreate):
     return status_obj
 
 @api_router.get("/status", response_model=List[StatusCheck])
-async def get_status_checks():
-    # Exclude MongoDB's _id field from the query results
-    status_checks = await db.status_checks.find({}, {"_id": 0}).to_list(1000)
+async def get_status_checks(limit: int = 100, skip: int = 0):
+    """Get status checks with pagination to prevent memory issues with large datasets"""
+    # Validate pagination parameters
+    if limit < 1 or limit > 1000:
+        raise HTTPException(status_code=400, detail="Limit must be between 1 and 1000")
+    if skip < 0:
+        raise HTTPException(status_code=400, detail="Skip must be non-negative")
+    
+    # Exclude MongoDB's _id field from the query results, add pagination
+    status_checks = await db.status_checks.find(
+        {}, 
+        {"_id": 0}
+    ).sort("timestamp", -1).skip(skip).limit(limit).to_list(limit)
     
     # Convert ISO string timestamps back to datetime objects
     for check in status_checks:
@@ -114,14 +125,16 @@ MAX_FILE_SIZE = 2 * 1024 * 1024 * 1024  # 2GB
 def get_project_upload_dir(project_id: str) -> Path:
     """Get or create upload directory for a project"""
     project_dir = UPLOAD_DIR / project_id
-    project_dir.mkdir(exist_ok=True)
-    (project_dir / "images").mkdir(exist_ok=True)
-    (project_dir / "audio").mkdir(exist_ok=True)
-    (project_dir / "video").mkdir(exist_ok=True)
+    # Check existence first to avoid unnecessary system calls
+    if not project_dir.exists():
+        project_dir.mkdir(exist_ok=True)
+        (project_dir / "images").mkdir(exist_ok=True)
+        (project_dir / "audio").mkdir(exist_ok=True)
+        (project_dir / "video").mkdir(exist_ok=True)
     return project_dir
 
 
-def optimize_image(image_path: Path, max_width: int = 1920, max_height: int = 1080) -> None:
+def optimize_image(image_path: Path, max_width: int = 1920, max_height: int = 1080) -> Path:
     """Optimize image file - resize if too large and save as WebP"""
     try:
         with Image.open(image_path) as img:
@@ -159,7 +172,9 @@ def extract_color_palette(image_path: Path, num_colors: int = 5) -> List[str]:
     """Extract dominant colors from an image"""
     try:
         color_thief = ColorThief(str(image_path))
-        palette = color_thief.get_palette(color_count=num_colors, quality=1)
+        # Use quality=10 instead of 1 for faster extraction (1 = highest quality/slowest)
+        # Quality parameter determines sampling: higher = faster, still accurate for most images
+        palette = color_thief.get_palette(color_count=num_colors, quality=10)
         # Convert RGB tuples to hex
         hex_colors = ['#%02x%02x%02x' % color for color in palette]
         return hex_colors
@@ -245,31 +260,37 @@ async def upload_asset(project_id: str, file: UploadFile = File(...)):
     # Process images
     if file_category == 'images':
         try:
-            optimized_path = optimize_image(file_path)
+            # Run CPU-intensive image operations in thread pool to avoid blocking event loop
+            optimized_path = await asyncio.to_thread(optimize_image, file_path)
             if optimized_path != file_path:
                 # Update stored filename and URL if converted to webp
                 asset_metadata["stored_filename"] = optimized_path.name
                 asset_metadata["url"] = f"/api/assets/{project_id}/{file_category}/{optimized_path.name}"
                 file_path = optimized_path
             
-            # Extract dimensions
+            # Extract dimensions (fast operation, can stay synchronous)
             with Image.open(file_path) as img:
                 asset_metadata["width"] = img.width
                 asset_metadata["height"] = img.height
             
-            # Extract color palette
-            colors = extract_color_palette(file_path)
+            # Extract color palette in thread pool (CPU-intensive)
+            colors = await asyncio.to_thread(extract_color_palette, file_path)
             asset_metadata["colors"] = colors
             
-            # Update project color palette
+            # Update project color palette efficiently using set for O(1) lookups
             if colors:
                 current_palette = project.get("color_palette", [])
-                # Add new colors that aren't already in palette
-                new_palette = current_palette + [c for c in colors if c not in current_palette]
-                await projects_collection.update_one(
-                    {"id": project_id},
-                    {"$set": {"color_palette": new_palette[:20]}}  # Keep max 20 colors
-                )
+                # Use set for O(1) membership checking instead of O(n) list lookup
+                palette_set = set(current_palette)
+                new_colors = [c for c in colors if c not in palette_set]
+                
+                if new_colors:
+                    # Only update if we have new colors to add
+                    updated_palette = (current_palette + new_colors)[-20:]  # Keep last 20 colors
+                    await projects_collection.update_one(
+                        {"id": project_id},
+                        {"$set": {"color_palette": updated_palette}}
+                    )
         except Exception as e:
             logger.error(f"Error processing image: {e}")
     
@@ -306,16 +327,22 @@ async def list_assets(project_id: str):
 @api_router.delete("/projects/{project_id}/assets/{asset_id}")
 async def delete_asset(project_id: str, asset_id: str):
     """Delete an asset from a project"""
-    project = await projects_collection.find_one({"id": project_id}, {"_id": 0})
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+    # Use MongoDB projection to fetch only the specific asset using positional operator
+    # This is more efficient than fetching the entire project and scanning the assets array
+    project = await projects_collection.find_one(
+        {"id": project_id, "assets.id": asset_id},
+        {"_id": 0, "assets.$": 1}
+    )
     
-    # Find asset
-    assets = project.get("assets", [])
-    asset = next((a for a in assets if a.get("id") == asset_id), None)
+    if not project or "assets" not in project or len(project["assets"]) == 0:
+        # Check if project exists at all
+        project_exists = await projects_collection.find_one({"id": project_id}, {"_id": 1})
+        if not project_exists:
+            raise HTTPException(status_code=404, detail="Project not found")
+        else:
+            raise HTTPException(status_code=404, detail="Asset not found")
     
-    if not asset:
-        raise HTTPException(status_code=404, detail="Asset not found")
+    asset = project["assets"][0]  # Positional operator returns array with single matching element
     
     # Delete file from disk
     project_dir = get_project_upload_dir(project_id)
@@ -348,6 +375,21 @@ async def serve_asset(project_id: str, file_category: str, filename: str):
         raise HTTPException(status_code=404, detail="Asset not found")
     
     return FileResponse(file_path)
+
+
+@app.on_event("startup")
+async def startup_db():
+    """Create database indexes on startup for better query performance"""
+    try:
+        # Create index on project id field for faster lookups
+        await projects_collection.create_index("id", unique=True)
+        # Create index on status checks client_name for faster filtering
+        await db.status_checks.create_index("client_name")
+        # Create index on status checks timestamp for sorting
+        await db.status_checks.create_index("timestamp")
+        logger.info("Database indexes created successfully")
+    except Exception as e:
+        logger.error(f"Error creating database indexes: {e}")
 
 
 @app.on_event("shutdown")
